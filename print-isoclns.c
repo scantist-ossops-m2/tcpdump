@@ -3084,15 +3084,27 @@ osi_print_cksum(netdissect_options *ndo,
 {
         uint16_t calculated_checksum;
 
-        /* do not attempt to verify the checksum if it is zero */
-        if (!checksum) {
+        /* do not attempt to verify the checksum if it is zero,
+         * if the total length is nonsense,
+         * if the offset is nonsense,
+         * or the base pointer is not sane
+         */
+        if (!checksum
+            || length > ndo->ndo_snaplen
+            || checksum_offset > ndo->ndo_snaplen
+            || checksum_offset > length) {
                 ND_PRINT((ndo, "(unverified)"));
         } else {
+                unsigned char *truncated = "trunc";
+                //printf("\nosi_print_cksum: %p %u %u %u\n", pptr, checksum_offset, length, ndo->ndo_snaplen);
+                //ND_TCHECK2(pptr, checksum_offset+length);
                 calculated_checksum = create_osi_cksum(pptr, checksum_offset, length);
                 if (checksum == calculated_checksum) {
                         ND_PRINT((ndo, " (correct)"));
                 } else {
-                        ND_PRINT((ndo, " (incorrect should be 0x%04x)", calculated_checksum));
+                        truncated = "incorrect";
+                        //trunc:
+                        ND_PRINT((ndo, " (%s should be 0x%04x)", truncated, calculated_checksum));
                 }
         }
 }
